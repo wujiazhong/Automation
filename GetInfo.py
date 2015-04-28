@@ -1,4 +1,3 @@
-#####################
 import os,re,shutil
 import time, datetime
 from time import sleep
@@ -173,7 +172,7 @@ def runScheduledTask():
             
             global log 
             log = open(os.getcwd()+r'\log.txt','a+')
-            log.write("**************************\n")
+            log.write("\n**************************\n")
             log.write("Date: "+now.strftime("%c")+'\n')
             log.write("Test Start...\n")
             
