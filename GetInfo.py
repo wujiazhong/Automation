@@ -1,6 +1,8 @@
 import os,re,shutil
 import time, datetime
 from time import sleep
+
+from TestInfo import MAIN_VERSION_INDEX
 from TestInfo import TestInfo
 from TestInfo import KEY_WORD_LIST
 
@@ -11,7 +13,7 @@ SUMMARY_DIRECTORY = ["reports","VC9_64","client"]
 
 #build directory information
 BUILD_RELATIVE_DIR = ["Client","Statistics", "dvd_WinClient"]
-BUILD_DOWNLOAD_PATH = ["C:\\" ,"test"]
+LOCAL_BUILD_PATH = ["C:\\" ,"test"]
 
 #target keyword
 IDENTICAL = "Identical"
@@ -26,8 +28,6 @@ PASS_THRESHOLD = 0.8*100
 
 #Silent install arguments
 MSI_EXE = r"C:\Windows\System32\msiexec.exe"
-STATS_INSTALL_AUTH_CODE = {"23":"4a06043af421b746c5e7",
-                           "24":"ff50159458f1d041d7e6"}
 INSTALL_DIR = ["C:\\" ,"Statistics"] 
 STATS_MSI = ["Windows","SPSSStatistics","win64","IBM SPSS Statistics 23.msi"]
 
@@ -35,7 +35,7 @@ STATS_MSI = ["Windows","SPSSStatistics","win64","IBM SPSS Statistics 23.msi"]
 ONE_HOUR = 3600
 HALF_HOUR = 1800
     
-def isPassTest():    
+def isPassTest():      
     fp = open(g_absolute_report_dir, 'r') 
     file_content = fp.read() 
     #find the second float number between word 'Identical' and symbol '%' 
@@ -53,43 +53,45 @@ def isPassTest():
     #print Identical_Info
     fp.close()
 
+    global log
     if float(Identical_Info)>=PASS_THRESHOLD and float(Identical_Info)<=100.0:
-        log.write("Identical rate is more than 80%, so BVT passed...\n")
+        log+=("Identical rate is more than 80%, so BVT passed...\n")
         print("BVT passed")
         return True
     else:
-        log.write("Identical rate is less than 80%, so BVT did not pass...\n")
+        log+=("Identical rate is less than 80%, so BVT did not pass...\n")
         print("BVT did not pass")
         return False
         
-def installNewBuild():
+def installNewBuild(main_version_index):
+    global log 
     if isPassTest():
-        des_dir = os.path.join(*(BUILD_DOWNLOAD_PATH+[g_version_index]))
-        if os.path.isdir(des_dir):
-            os.system(r"C:\Windows\System32\attrib -r "+ des_dir+"\*.* " + " /s /d")
-            log.write("Start to clear old download build...\n")
-            shutil.rmtree(des_dir, ignore_errors = True)
-            log.write("Complete clearing old download build...\n")
-         
+        des_dir = os.path.join(*(LOCAL_BUILD_PATH+[g_latest_build_index]))
+                  
         #download new version 
-        log.write("Start to download latest build...\n")            
+        log+=("Start to download latest build...\n")            
         shutil.copytree(g_absolute_build_dir,des_dir)
-        log.write("Complete downloading latest build...\n")
+        log+=("Complete downloading latest build...\n")
        
         #uninstall old version
-        if not uninstallStats():
+        if not uninstallStats(main_version_index):
             return False       
         #install new version
-        if not installStats():
+        if not installStats(main_version_index):
             return False 
         
+        if os.path.isdir(des_dir):
+            os.system(r"C:\Windows\System32\attrib -r "+ des_dir+"\*.* " + " /s /d")
+            log+=("Start to delete old download build...\n")
+            shutil.rmtree(des_dir, ignore_errors = True)
+            log+=("Complete deleting old download build...\n")
+            
         return True       
         
     else:
         #TO DO
-        log.write("The installation failed!\n")
-        log.write("**************************\n\n")
-        log.close() 
+        log+=("The installation failed since BVT test did not pass!\n")
+        log+=("**************************\n\n")
         return False
     
 def sortVersionList(version_dir_list):
@@ -105,137 +107,136 @@ def sortVersionList(version_dir_list):
         i+=1
     return version_dir_list
                 
-def hasNewBuild(version_for_test):
+def hasNewBuild(main_version_index):    
     path = os.path.join(*VERSION_DIRECTORY)
-    version_dir_list = list()
+    build_list = list()
     for item in os.listdir(path):
-        #match version 23.*.*.*.**
-        if re.match("(^"+version_for_test+"\.\d{1,3}$)", item):
-            version_dir_list.append(item)
-    
-    last_test_build_no = test_info_table.getLatestBuildNo(version_for_test)        
-    #find newest version
-    version_dir_list = sortVersionList(version_dir_list)
-    for item in version_dir_list:
-        if int(item.split('.')[-1]) > int(last_test_build_no.split('.')[-1]):
-            g_version_index = item
-            g_absolute_report_dir = os.path.join(*(VERSION_DIRECTORY+[g_version_index]+SUMMARY_DIRECTORY+[SUMMARY_FILE_NAME]))  
-            if os.path.isfile(g_absolute_report_dir):         
-                g_absolute_build_dir= os.path.join(*(VERSION_DIRECTORY+[g_version_index]+BUILD_RELATIVE_DIR))
-    
-    if int(g_version_index.split('.')[-1])>int(last_test_build_no.split('.')[-1]):
-        return True
-                
-    while int(newest_version.split('.')[-1]) > int(last_test_build_no.split('.')[-1]): 
-        g_version_index = newest_version
-        g_absolute_report_dir = os.path.join(*(VERSION_DIRECTORY+[g_version_index]+SUMMARY_DIRECTORY+[SUMMARY_FILE_NAME]))  
-        if os.path.isfile(g_absolute_report_dir):         
-            g_absolute_build_dir= os.path.join(*(VERSION_DIRECTORY+[g_version_index]+BUILD_RELATIVE_DIR))
+        #e.g. main_version_index = 23.0.0.1
+        #build_list consists of all sub-build under this main_version
+        if re.match("(^"+main_version_index+"\.\d{1,3}$)", item):
+            build_list.append(item)
+           
+    #sort the build_list from largest to smallest
+    last_test_build_index = test_info_table.getLatestBuildNo(main_version_index) 
+    build_list = sortVersionList(build_list)
+    hasNewBuild = False
+    for item in build_list:
+        if int(item.split('.')[-1]) > int(last_test_build_index.split('.')[-1]):
+            global g_latest_build_index 
+            global g_absolute_report_dir
+            global g_absolute_build_dir
+
+            g_latest_build_index = item
+            g_absolute_report_dir = os.path.join(*(VERSION_DIRECTORY+[g_latest_build_index]+SUMMARY_DIRECTORY+[SUMMARY_FILE_NAME]))  
+            if os.path.isfile(g_absolute_report_dir):        
+                g_absolute_build_dir= os.path.join(*(VERSION_DIRECTORY+[g_latest_build_index]+BUILD_RELATIVE_DIR))
+                hasNewBuild = True
+                break
         else:
-            build = int(newest_version.split('.')[-1])
-            newest_version = '.'.join(newest_version.split('.')[0:-1]+[str(build-1)])
-        return True
-    
-    g_version_index = last_test_build_no
-    return False
-    
+            break
+                
+    return hasNewBuild
+
+def getSysTime():
+    now = datetime.datetime.now()
+    return now.strftime("%c")
+
+def updateTestInfoObj(main_version_index):
+    test_info_table.setLatestBuildNo(main_version_index, g_latest_build_index)
+    test_info_table.setLastTestTime(getSysTime(),g_latest_build_index)
+
 def runScheduledTask(): 
+    global log
     while True:
-        now = datetime.datetime.now()
-        today=int(time.strftime("%w"))
-        
-        for item in test_info_table:
-            if hasNewBuild(item[KEY_WORD_LIST[0]]):
-                sleep(HALF_HOUR)
+        for item in test_info_table.test_info_list:
+            log=""
+            if hasNewBuild(item[KEY_WORD_LIST[MAIN_VERSION_INDEX]]):
+                #sleep(HALF_HOUR)
                 #do something 
-                log = open(os.getcwd()+r'\log.txt','a+')
-                log.write("\n**************************\n")
-                log.write("Date: "+now.strftime("%c")+'\n')
-                log.write("Build NO: "+g_version_index+"\n")
-                log.write("Test Start...\n")
+                log_file = open(os.getcwd()+r'\log.txt','a+')
+                log+=("\n**************************\n")
+                log+=("Date: "+getSysTime()+'\n')
+                print(g_latest_build_index)
+                log+=("Build NO: "+g_latest_build_index+"\n")
+                log+=("Test Start...\n")
                 
-                if installNewBuild():
-                    test_info_table.setLatestBuildNo(item[KEY_WORD_LIST[0]], g_version_index)
+                if installNewBuild(item[KEY_WORD_LIST[MAIN_VERSION_INDEX]]):
+                    updateTestInfoObj(item[KEY_WORD_LIST[MAIN_VERSION_INDEX]])
+                    test_info_table.updateTestInfoFile()
+                    log+=("Update 'test_info'\n")
                 
-                log.close()
+                log+=("\n**************************\n")
+                log_file.close()
         
+        today=int(time.strftime("%w"))
         while True:
             sleep(ONE_HOUR)
             cur_date = int(time.strftime("%w"))
             if cur_date != today:
                 continue
-                
-                
-#         if today in REST_DAYS or cur_time != CHECK_TIME:
-#             sleep(HALF_HOUR) 
-#             continue             
-#         else:
-#             #version_for_test = getVersionNeedtest(today)
-#             version_for_test = "23.0.0.1"
-#             
-#             global log 
-#             log = open(os.getcwd()+r'\log.txt','a+')
-#             log.write("\n**************************\n")
-#             log.write("Date: "+now.strftime("%c")+'\n')
-#             log.write("Test Start...\n")
-#             
-#             if installNewBuild(version_for_test):
-#                 while True:
-#                     sleep(ONE_HOUR)
-#                     cur_date = int(time.strftime("%w"))
-#                     if cur_date != today:
-#                         break;
-#                 continue
-#             else:
-#                 print("Fail")
-#                 break
-    return
 
-def installStats():
-    stats_msi_absolute_path = os.path.join(*(BUILD_DOWNLOAD_PATH+[g_version_index]+STATS_MSI))
-    auth_code = test_info_table.getInstallCode(g_version_index)
-    install_dir = os.path.join(*(INSTALL_DIR+[g_version_index]))
+def installStats(main_version_index):
+    global log
+    stats_msi_absolute_path = os.path.join(*(LOCAL_BUILD_PATH+[g_latest_build_index]+STATS_MSI))
+    print(stats_msi_absolute_path)
+    auth_code = test_info_table.getInstallCode(main_version_index)
+    install_dir = os.path.join(*(INSTALL_DIR+[g_latest_build_index]))
     if not os.path.isdir(install_dir):
         os.mkdir(install_dir)
     
-    log.write("start to install Stats...\n") 
+    log+=("start to install Stats...\n") 
     os.system(MSI_EXE + " /i " + "\"" + stats_msi_absolute_path + "\"" + " /qn /norestart /L*v logfile.txt " + "INSTALLDIR="+ "\"" + install_dir + "\"" + " AUTHCODE=" + auth_code)   
-    exe_file = os.path.join(*(INSTALL_DIR+[g_version_index]+["stats.exe"]))
+    exe_file = os.path.join(*(INSTALL_DIR+[g_latest_build_index]+["stats.exe"]))
     if os.path.isfile(exe_file):
         print("Succeed installing Stats!")
-        log.write("Complete the uninstallation...\n")
+        log+=("Complete the uninstallation...\n")
         return True
     else:
         print("Fail to install Stats!")
-        log.write("Fail to install Stats...\n")
+        log+=("Fail to install Stats...\n")
         return False
       
-def uninstallStats():
-    log.write("Start to uninstall an old version...\n") 
-    uninstall_code = test_info_table.getUninstallCode(g_version_index)
-    os.system(MSI_EXE + r" /X{"+uninstall_code+"} /qn /norestart /L*v logfile.txt ALLUSERS=1 REMOVE='ALL'")
-
-    install_dir = os.path.join(*(INSTALL_DIR+[g_version_index]))
-    exe_file = os.path.join(*(INSTALL_DIR+[g_version_index]+["stats.exe"]))
+def uninstallStats(main_version_index):
+    global log
+    log+=("Start to uninstall an old version...\n")
+    install_dir = os.path.join(*(INSTALL_DIR+[g_latest_build_index])) 
+    if not os.path.isdir(install_dir):
+        log+=("No current build has been insatlled!\n")    
+        return True
+    
+    uninstall_code = test_info_table.getUninstallCode(main_version_index)
+    print(uninstall_code)
+    os.system(MSI_EXE + " /X{"+uninstall_code+"} /qn /norestart /L*v logfile.txt ALLUSERS=1 REMOVE=\"ALL\"")
+    
+    install_dir = os.path.join(*(INSTALL_DIR+[g_latest_build_index]))
+    exe_file = os.path.join(*(INSTALL_DIR+[g_latest_build_index]+["stats.exe"]))
     if os.path.isfile(exe_file):
-        print("Fail to uninstall Stats!")
-        log.write("Fail to uninstall Stats...!")
+        print("Fail to uninstall Stats!\n")
+        log+=("Fail to uninstall Stats...!\n")
         return False
     else:
         if os.path.isdir(install_dir):
             os.system(r"C:\Windows\System32\attrib -r "+ install_dir+"\*.* " + " /s /d")
             shutil.rmtree(install_dir, ignore_errors = True)
-        print("Succeed uninstalling Stats!")
-        log.write("Succeed uninstalling Stats...!")
+        print("Succeed uninstalling Stats!\n")
+        log+=("Succeed uninstalling Stats...!\n")
         return True
-
-    
+   
 if __name__ == '__main__':
+    #including last successful test build in every main version
     global test_info_table
-    global g_version_index   
+    test_info_table = TestInfo()
+    
+    #last test build
+    global g_latest_build_index
+     
+    #dir of BVT report summary   
     global g_absolute_report_dir
+     
+    #dir of new build
     global g_absolute_build_dir
+     
+    #log file to record test process
     global log
     
-    test_info_table = TestInfo()
     runScheduledTask()
