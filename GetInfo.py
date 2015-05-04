@@ -193,8 +193,6 @@ def installStats(main_version_index):
     version_index = main_version_index.split('.')[0]
     stats = copy.deepcopy(STATS_MSI)
     stats[-1] = stats[-1].replace("{VINDX}", version_index,1)
-    print(len(stats))
-    print(stats)
     
     global log
     stats_msi_absolute_path = os.path.join(*(LOCAL_BUILD_SAVING_PATH+[g_latest_build_index]+stats))
