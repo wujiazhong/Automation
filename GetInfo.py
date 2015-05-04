@@ -1,7 +1,8 @@
 import os,re,shutil
 import time, datetime
-from time import sleep
 import copy
+
+from time import sleep
 
 from TestInfo import MAIN_VERSION_INDEX
 from TestInfo import TestInfo
@@ -70,9 +71,11 @@ def installNewBuild(main_version_index):
         des_dir = os.path.join(*(LOCAL_BUILD_SAVING_PATH+[g_latest_build_index]))
             
         #download new version 
-        log+=("Start to download latest build...\n")            
+        log+=("Start to download latest build...\n")
+        print("Start to download new build...")
         shutil.copytree(g_absolute_build_dir,des_dir)
         log+=("Complete downloading latest build...\n")
+        print("Complete downloading...")
               
         #install new version
         if not installStats(main_version_index):
@@ -189,10 +192,13 @@ def runScheduledTask():
 def installStats(main_version_index):
     version_index = main_version_index.split('.')[0]
     stats = copy.deepcopy(STATS_MSI)
-    stats[-1].replace("{VINDX}", version_index,1)
+    stats[-1] = stats[-1].replace("{VINDX}", version_index,1)
+    print(len(stats))
+    print(stats)
     
     global log
     stats_msi_absolute_path = os.path.join(*(LOCAL_BUILD_SAVING_PATH+[g_latest_build_index]+stats))
+    print(stats_msi_absolute_path)
     auth_code = test_info_table.getInstallCode(main_version_index)
     install_dir = os.path.join(*(INSTALL_DIR+[g_latest_build_index]))
     if not os.path.isdir(install_dir):

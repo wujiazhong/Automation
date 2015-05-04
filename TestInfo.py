@@ -92,8 +92,8 @@ class TestInfo:
 
         fp_config_temp.close()
         os.remove(INIT_FILENAME)
-        os.rename(temp_file,INIT_FILENAME) 
-    
+        os.rename(temp_file,INIT_FILENAME)
+
     def getUninstallCodeTable(self):
         uninstall_code_dict = {}
         for table_item in self.test_info_list:
