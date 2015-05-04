@@ -84,7 +84,6 @@ def installNewBuild(main_version_index):
         if not uninstallStats(main_version_index):
             return False
         
-        print(des_dir)
         if os.path.isdir(des_dir):
             os.system(r"C:\Windows\System32\attrib -r "+ des_dir+"\*.* " + " /s /d")
             log+=("Start to delete old download build...\n")
@@ -149,6 +148,11 @@ def updateTestInfoObj(main_version_index):
     test_info_table.setLatestBuildNo(main_version_index, g_latest_build_index)
     test_info_table.setLastTestTime(getSysTime(),g_latest_build_index)
 
+def backupLogInfo(log_info):
+    log_backup_file = open(os.getcwd()+r'\log_backup.txt','r+')
+    log_backup_file.write(log_info)
+    log_backup_file.close()
+    
 def runScheduledTask(): 
     global log
     while True:
@@ -171,8 +175,9 @@ def runScheduledTask():
                 
                 log+=("\n**************************\n")
                 log_file.write(log)
+                backupLogInfo(log)
                 log_file.close()
-                print("\n\n\n")
+                print("\n\n")
         
         today=int(time.strftime("%w"))
         while True:
@@ -198,7 +203,7 @@ def installStats(main_version_index):
     exe_file = os.path.join(*(INSTALL_DIR+[g_latest_build_index]+["stats.exe"]))
     if os.path.isfile(exe_file):
         print("Succeed installing Stats!")
-        log+=("Complete the uninstallation...\n")
+        log+=("Complete the installation...\n")
         return True
     else:
         print("Fail to install Stats!")
@@ -231,8 +236,17 @@ def uninstallStats(main_version_index):
         return True
 
 def clearEnvironment():
-    #clear log file
-    log_file = open(os.getcwd()+r'\log.txt','w+')
+    #create log_backup file
+    if not os.path.isfile(os.getcwd()+r'\log_backup.txt'):
+        log_backup_file = open(os.getcwd()+r'\log_backup.txt','w+')
+        log_backup_file.close()
+    
+    #clear log file and start current test 
+    log_file = open(os.getcwd()+r'\log.txt','w+')    
+    log_file.write("**********************************\n")
+    log_file.write("*A new cycle of test is starting.*\n")
+    log_file.write("*Beginning Data:" +getSysTime()+"*\n")
+    log_file.write("**********************************\n")
     log_file.close()
     
     #when initiating this script, all Stats installed on the machine will be uninstalled first
