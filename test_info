@@ -12,3 +12,10 @@ Last_Test_Time=04/30/15 09:46:17
 Build_Install_Code=4a06043af421b746c5e7
 Build_Uninstall_Code=C3BA73A4-2A45-4036-8541-4F5F8146078B
 </Build_Entry>
+<Build_Entry>
+Main_Version=24.0.0.0
+Last_Test_Build=24.0.0.0.10
+Last_Test_Time=04/30/15 09:46:17
+Build_Install_Code=ff50159458f1d041d7e6
+Build_Uninstall_Code=4762AE15-E5A3-43BF-8822-1CFC70FB147A
+</Build_Entry>
