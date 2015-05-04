@@ -169,6 +169,7 @@ def runScheduledTask():
                     log+=("Update 'test_info'\n")
                 
                 log+=("\n**************************\n")
+                log_file.write(log)
                 log_file.close()
                 print("\n\n\n")
         
