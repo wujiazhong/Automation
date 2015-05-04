@@ -67,7 +67,7 @@ def installNewBuild(main_version_index):
     global log 
     if isPassTest():
         des_dir = os.path.join(*(LOCAL_BUILD_SAVING_PATH+[g_latest_build_index]))
-                  
+            
         #download new version 
         log+=("Start to download latest build...\n")            
         shutil.copytree(g_absolute_build_dir,des_dir)
@@ -75,20 +75,20 @@ def installNewBuild(main_version_index):
               
         #install new version
         if not installStats(main_version_index):
-            return False
-        
+            return False 
+
         #conduct RFT 
         #pass the build_index as an argument
         
         if not uninstallStats(main_version_index):
-            return False 
+            return False
         
+        print(des_dir)
         if os.path.isdir(des_dir):
             os.system(r"C:\Windows\System32\attrib -r "+ des_dir+"\*.* " + " /s /d")
             log+=("Start to delete old download build...\n")
             shutil.rmtree(des_dir, ignore_errors = True)
             log+=("Complete deleting old download build...\n")
-            
         return True       
         
     else:
@@ -170,6 +170,7 @@ def runScheduledTask():
                 
                 log+=("\n**************************\n")
                 log_file.close()
+                print("\n\n\n")
         
         today=int(time.strftime("%w"))
         while True:
@@ -180,10 +181,13 @@ def runScheduledTask():
 
 def installStats(main_version_index):
     version_index = main_version_index.split('.')[0]
-    STATS_MSI = STATS_MSI[-1].replace("{VINDX}", version_index,1)
-     
+    print(version_index)
+    stats = STATS_MSI
+    stats[-1] = STATS_MSI[-1].replace("{VINDX}", version_index,1)
+    print(stats)
+    
     global log
-    stats_msi_absolute_path = os.path.join(*(LOCAL_BUILD_SAVING_PATH+[g_latest_build_index]+STATS_MSI))
+    stats_msi_absolute_path = os.path.join(*(LOCAL_BUILD_SAVING_PATH+[g_latest_build_index]+stats))
     print(stats_msi_absolute_path)
     auth_code = test_info_table.getInstallCode(main_version_index)
     install_dir = os.path.join(*(INSTALL_DIR+[g_latest_build_index]))
@@ -211,7 +215,6 @@ def uninstallStats(main_version_index):
         return True
     
     uninstall_code = test_info_table.getUninstallCode(main_version_index)
-    print(uninstall_code)
     os.system(MSI_EXE + " /X{"+uninstall_code+"} /qn /norestart /L*v logfile.txt ALLUSERS=1 REMOVE=\"ALL\"")
     
     install_dir = os.path.join(*(INSTALL_DIR+[g_latest_build_index]))
@@ -239,14 +242,17 @@ def clearEnvironment():
     if os.path.isdir(install_dir):
         os.system(r"C:\Windows\System32\attrib -r "+ install_dir+"\*.* " + " /s /d")
         shutil.rmtree(install_dir)
+    os.mkdir(install_dir)
     
     #delete all the saving builds on the machine
     local_download_dir = os.path.join(*LOCAL_BUILD_SAVING_PATH)
     if os.path.isdir(local_download_dir):
         os.system(r"C:\Windows\System32\attrib -r "+ local_download_dir+"\*.* " + " /s /d")
         shutil.rmtree(local_download_dir)
-    
-   
+    os.mkdir(local_download_dir)
+
+    print("Complete clearing...")
+
 if __name__ == '__main__':
     #including last successful test build in every main version
     global test_info_table
@@ -263,5 +269,6 @@ if __name__ == '__main__':
      
     #log file to record test process
     global log
-    
+
+    clearEnvironment()
     runScheduledTask()
