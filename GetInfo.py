@@ -1,6 +1,7 @@
 import os,re,shutil
 import time, datetime
 from time import sleep
+import copy
 
 from TestInfo import MAIN_VERSION_INDEX
 from TestInfo import TestInfo
@@ -182,14 +183,11 @@ def runScheduledTask():
 
 def installStats(main_version_index):
     version_index = main_version_index.split('.')[0]
-    print(version_index)
-    stats = STATS_MSI
-    stats[-1] = STATS_MSI[-1].replace("{VINDX}", version_index,1)
-    print(stats)
+    stats = copy.deepcopy(STATS_MSI)
+    stats[-1].replace("{VINDX}", version_index,1)
     
     global log
     stats_msi_absolute_path = os.path.join(*(LOCAL_BUILD_SAVING_PATH+[g_latest_build_index]+stats))
-    print(stats_msi_absolute_path)
     auth_code = test_info_table.getInstallCode(main_version_index)
     install_dir = os.path.join(*(INSTALL_DIR+[g_latest_build_index]))
     if not os.path.isdir(install_dir):
@@ -233,6 +231,10 @@ def uninstallStats(main_version_index):
         return True
 
 def clearEnvironment():
+    #clear log file
+    log_file = open(os.getcwd()+r'\log.txt','w+')
+    log_file.close()
+    
     #when initiating this script, all Stats installed on the machine will be uninstalled first
     uninstall_code_dict = test_info_table.getUninstallCodeTable()
     for item in uninstall_code_dict.keys():
