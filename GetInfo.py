@@ -2,8 +2,6 @@ import os,re,shutil
 import time, datetime
 import copy
 
-from time import sleep
-
 from TestInfo import MAIN_VERSION_INDEX
 from TestInfo import TestInfo
 from TestInfo import KEY_WORD_LIST
@@ -140,7 +138,8 @@ def hasNewBuild(main_version_index):
                 break
         else:
             break
-                
+    
+    print("Has new build: "+hasNewBuild)            
     return hasNewBuild
 
 def getSysTime():
@@ -184,7 +183,7 @@ def runScheduledTask():
         
         today=int(time.strftime("%w"))
         while True:
-            sleep(ONE_HOUR)
+            time.sleep(ONE_HOUR)
             cur_date = int(time.strftime("%w"))
             if cur_date != today:
                 break
