@@ -152,7 +152,7 @@ def updateTestInfoObj(main_version_index):
     test_info_table.setLastTestTime(getSysTime(),g_latest_build_index)
 
 def backupLogInfo(log_info):
-    log_backup_file = open(os.getcwd()+r'\log_backup.txt','a+')
+    log_backup_file = open(os.getcwd()+r'\log_backup.txt','r+')
     log_backup_file.write(log_info)
     log_backup_file.close()
     
@@ -186,6 +186,7 @@ def runScheduledTask():
         while True:
             sleep(ONE_HOUR)
             cur_date = int(time.strftime("%w"))
+            print(cur_date)
             if cur_date != today:
                 break
 
@@ -193,6 +194,8 @@ def installStats(main_version_index):
     version_index = main_version_index.split('.')[0]
     stats = copy.deepcopy(STATS_MSI)
     stats[-1] = stats[-1].replace("{VINDX}", version_index,1)
+    print(len(stats))
+    print(stats)
     
     global log
     stats_msi_absolute_path = os.path.join(*(LOCAL_BUILD_SAVING_PATH+[g_latest_build_index]+stats))
