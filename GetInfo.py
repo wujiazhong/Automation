@@ -159,7 +159,6 @@ def runScheduledTask():
     global log
     while True:
         for item in test_info_table.test_info_list:
-            print("in for")
             log=""
             if hasNewBuild(item[KEY_WORD_LIST[MAIN_VERSION_INDEX]]):
                 #sleep(HALF_HOUR)
