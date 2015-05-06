@@ -41,7 +41,7 @@ class TestInfo:
             self.test_info_list.append(dict(zip(KEY_WORD_LIST,value_list)))
             i+=1
         
-        self.recent_test_main_version_index =     
+        self.recent_test_main_version_index = NO_STATS_INSTALLED    
         fp_config.close()
     
     def getLatestBuildNo(self,main_version_index):
