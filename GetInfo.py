@@ -138,8 +138,8 @@ def hasNewBuild(main_version_index):
                 break
         else:
             break
-    
-    print("Has new build: "+hasNewBuild)            
+        
+    print("Has new build: ",hasNewBuild)             
     return hasNewBuild
 
 def getSysTime():
@@ -159,6 +159,7 @@ def runScheduledTask():
     global log
     while True:
         for item in test_info_table.test_info_list:
+            print("in for")
             log=""
             if hasNewBuild(item[KEY_WORD_LIST[MAIN_VERSION_INDEX]]):
                 #sleep(HALF_HOUR)
@@ -185,7 +186,7 @@ def runScheduledTask():
         while True:
             time.sleep(ONE_HOUR)
             cur_date = int(time.strftime("%w"))
-            print(cur_date)
+            print(today, cur_date)
             if cur_date != today:
                 break
 
@@ -193,8 +194,6 @@ def installStats(main_version_index):
     version_index = main_version_index.split('.')[0]
     stats = copy.deepcopy(STATS_MSI)
     stats[-1] = stats[-1].replace("{VINDX}", version_index,1)
-    print(len(stats))
-    print(stats)
     
     global log
     stats_msi_absolute_path = os.path.join(*(LOCAL_BUILD_SAVING_PATH+[g_latest_build_index]+stats))
