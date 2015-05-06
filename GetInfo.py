@@ -5,6 +5,7 @@ import copy
 from TestInfo import MAIN_VERSION_INDEX
 from TestInfo import TestInfo
 from TestInfo import KEY_WORD_LIST
+from TestInfo import NO_STATS_INSTALLED
 
 #report summary path information
 SUMMARY_FILE_NAME = "results_summary.txt"
@@ -33,7 +34,7 @@ STATS_MSI = ["Windows","SPSSStatistics","win64","IBM SPSS Statistics {VINDX}.msi
 
 #Time
 ONE_HOUR = 3600
-HALF_HOUR = 1800
+ONE_MIN = 60
     
 def isPassTest():      
     fp = open(g_absolute_report_dir, 'r') 
@@ -61,6 +62,8 @@ def isPassTest():
     else:
         log+=("Identical rate is less than 80%, so BVT did not pass...\n")
         print("BVT did not pass")
+        #to do
+        #send email
         return False
         
 def installNewBuild(main_version_index):
@@ -74,6 +77,10 @@ def installNewBuild(main_version_index):
         shutil.copytree(g_absolute_build_dir,des_dir)
         log+=("Complete downloading latest build...\n")
         print("Complete downloading...")
+        
+        if test_info_table.getRecentTestMainVersionIndex() is not NO_STATS_INSTALLED:
+            if not uninstallStats(test_info_table.getRecentTestMainVersionIndex()):
+                return False
               
         #install new version
         if not installStats(main_version_index):
@@ -81,9 +88,6 @@ def installNewBuild(main_version_index):
 
         #conduct RFT 
         #pass the build_index as an argument
-        
-        if not uninstallStats(main_version_index):
-            return False
         
         if os.path.isdir(des_dir):
             os.system(r"C:\Windows\System32\attrib -r "+ des_dir+"\*.* " + " /s /d")
@@ -139,7 +143,7 @@ def hasNewBuild(main_version_index):
         else:
             break
     
-    print("Has new build: "+hasNewBuild)            
+    print("Has new build: ",hasNewBuild)            
     return hasNewBuild
 
 def getSysTime():
@@ -151,41 +155,51 @@ def updateTestInfoObj(main_version_index):
     test_info_table.setLastTestTime(getSysTime(),g_latest_build_index)
 
 def backupLogInfo(log_info):
-    log_backup_file = open(os.getcwd()+r'\log_backup.txt','a+')
+    log_backup_file = open(os.getcwd()+r'\log_backup.txt','r+')
     log_backup_file.write(log_info)
     log_backup_file.close()
     
 def runScheduledTask(): 
     global log
     while True:
-        for item in test_info_table.test_info_list:
-            log=""
-            if hasNewBuild(item[KEY_WORD_LIST[MAIN_VERSION_INDEX]]):
-                #sleep(HALF_HOUR)
-                #do something 
-                log_file = open(os.getcwd()+r'\log.txt','a+')
-                log+=("\n**************************\n")
-                log+=("Date: "+getSysTime()+'\n')
-                print(g_latest_build_index)
-                log+=("Build NO: "+g_latest_build_index+"\n")
-                log+=("Test Start...\n")
-                
-                if installNewBuild(item[KEY_WORD_LIST[MAIN_VERSION_INDEX]]):
-                    updateTestInfoObj(item[KEY_WORD_LIST[MAIN_VERSION_INDEX]])
-                    test_info_table.updateTestInfoFile()
-                    log+=("Update 'test_info'\n")
-                
-                log+=("\n**************************\n")
-                log_file.write(log)
-                backupLogInfo(log)
-                log_file.close()
-                print("\n\n")
+        global g_is_test_stats_today
+        g_is_test_stats_today = False
         
+        while not g_is_test_stats_today:
+            for item in test_info_table.test_info_list:
+                log=""
+                if hasNewBuild(item[KEY_WORD_LIST[MAIN_VERSION_INDEX]]):
+                    #sleep(HALF_HOUR)
+                    #do something 
+                    log_file = open(os.getcwd()+r'\log.txt','a+')
+                    log+=("\n**************************\n")
+                    log+=("Date: "+getSysTime()+'\n')
+                    print(g_latest_build_index)
+                    log+=("Build NO: "+g_latest_build_index+"\n")
+                    log+=("Test Start...\n")
+                    
+                    if installNewBuild(item[KEY_WORD_LIST[MAIN_VERSION_INDEX]]):
+                        g_is_test_stats_today = True
+                        updateTestInfoObj(item[KEY_WORD_LIST[MAIN_VERSION_INDEX]])
+                        test_info_table.updateTestInfoFile()
+                        log+=("Update 'test_info'\n")
+                    
+                    log+=("\n**************************\n")
+                    log_file.write(log)
+                    backupLogInfo(log)
+                    log_file.close()
+                                                             
+                if g_is_test_stats_today:
+                    break
+
+            time.sleep(ONE_HOUR)
+            
         today=int(time.strftime("%w"))
         while True:
             time.sleep(ONE_HOUR)
             cur_date = int(time.strftime("%w"))
             if cur_date != today:
+                g_is_test_stats_today = False
                 break
 
 def installStats(main_version_index):
@@ -205,6 +219,7 @@ def installStats(main_version_index):
     os.system(MSI_EXE + " /i " + "\"" + stats_msi_absolute_path + "\"" + " /qn /norestart /L*v logfile.txt " + "INSTALLDIR="+ "\"" + install_dir + "\"" + " AUTHCODE=" + auth_code)   
     exe_file = os.path.join(*(INSTALL_DIR+[g_latest_build_index]+["stats.exe"]))
     if os.path.isfile(exe_file):
+        test_info_table.setRecentTestMainVersionIndex(main_version_index)
         print("Succeed installing Stats!")
         log+=("Complete the installation...\n")
         return True

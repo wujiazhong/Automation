@@ -21,6 +21,7 @@ INIT_FILENAME = "test_info"
 
 BUILD_ITEM_HEAD = "<Build_Entry>"
 BUILD_ITEM_TAIL = r"</Build_Entry>"
+NO_STATS_INSTALLED = "NONE"
 
 class TestInfo:
     def __init__(self):
@@ -39,7 +40,8 @@ class TestInfo:
             value_list=[basic_build_info[i],last_test_build_number[i],last_test_time[i],install_code[i],uninstall_code[i]] 
             self.test_info_list.append(dict(zip(KEY_WORD_LIST,value_list)))
             i+=1
-            
+        
+        self.recent_test_main_version_index =     
         fp_config.close()
     
     def getLatestBuildNo(self,main_version_index):
@@ -99,4 +101,9 @@ class TestInfo:
         for table_item in self.test_info_list:
             uninstall_code_dict[table_item[KEY_WORD_LIST[MAIN_VERSION_INDEX]]] = table_item[KEY_WORD_LIST[BUILD_UNINSTALL_CODE]]
         return uninstall_code_dict
-            
+    
+    def getRecentTestMainVersionIndex(self):
+        return self.recent_test_main_version_index
+    
+    def setRecentTestMainVersionIndex(self, main_version_index):
+        self.recent_test_main_version_index =  main_version_index       
