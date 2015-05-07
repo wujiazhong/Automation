@@ -78,7 +78,8 @@ def installNewBuild(main_version_index):
         shutil.copytree(g_absolute_build_dir,des_dir)
         log+=("Complete downloading latest build...\n")
         print("Complete downloading...")
-        
+
+        print(test_info_table.getRecentTestMainVersionIndex())
         if test_info_table.getRecentTestMainVersionIndex() != NO_STATS_INSTALLED:
             if not uninstallStats(test_info_table.getRecentTestMainVersionIndex()):
                 return False
@@ -194,15 +195,16 @@ def runScheduledTask():
                     print("Complete a test today!")
                     break
 
-            print(g_is_test_stats_today)
+            print("Is complete a test today?",g_is_test_stats_today)
             time.sleep(ONE_MIN)
             
         today=int(time.strftime("%w"))
         while True:
+            print("Now start to wait for another day!")
             time.sleep(ONE_HOUR)
             cur_date = int(time.strftime("%w"))
             if cur_date != today:
-                print("Wait for an another day!")
+                print("Data changed!")
                 g_is_test_stats_today = False
                 break
 
