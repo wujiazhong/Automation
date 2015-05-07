@@ -78,8 +78,7 @@ def installNewBuild(main_version_index):
         shutil.copytree(g_absolute_build_dir,des_dir)
         log+=("Complete downloading latest build...\n")
         print("Complete downloading...")
-
-        print(test_info_table.getRecentTestMainVersionIndex())
+        
         if test_info_table.getRecentTestMainVersionIndex() != NO_STATS_INSTALLED:
             if not uninstallStats(test_info_table.getRecentTestMainVersionIndex()):
                 return False
