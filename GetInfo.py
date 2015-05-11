@@ -7,6 +7,8 @@ from TestInfo import TestInfo
 from TestInfo import KEY_WORD_LIST
 from TestInfo import NO_STATS_INSTALLED
 
+from SendEmail import SendEmail
+
 #report summary path information
 SUMMARY_FILE_NAME = "results_summary.txt"
 VERSION_DIRECTORY = [r"\\svs1bo01","Stats","builds","outputs","statisticsmedia"]
@@ -16,7 +18,8 @@ SUMMARY_DIRECTORY = ["reports","VC9_64","client"]
 BUILD_RELATIVE_DIR = ["Client","Statistics", "dvd_WinClient"]
 LOCAL_BUILD_SAVING_PATH = ["C:\\" ,"test"]
 
-#target keyword
+#target keyword, 
+#Identical = [number], if number>80%, BVT pass
 IDENTICAL = "Identical"
 
 #error msg
@@ -24,7 +27,7 @@ ERROR_MSG_LOGIN = "Fail to log in!"
 ERROR_MSG_NO_FILE = "Fail to open the file. Please check if the file exists!"
 ERROR_MSG_NO_REQUIRED_VERSION = "Please check the version directory. No matched version requested is found!"
 
-#threshold
+#identical threshold
 PASS_THRESHOLD = 0.8*100
 
 #Silent install arguments
@@ -35,6 +38,9 @@ STATS_MSI = ["Windows","SPSSStatistics","win64","IBM SPSS Statistics {VINDX}.msi
 #Time
 ONE_HOUR = 3600
 ONE_MIN = 60
+
+FAIL = "Failed"
+SUCCESS = "Succeeded"
     
 def isPassTest():
     fp = open(g_absolute_report_dir, 'r') 
@@ -48,6 +54,8 @@ def isPassTest():
             raise Exception("Too many keyword 'Identical' are matched. Please check the file!")
     except Exception:
         print("Report summary file does not has or has too much keyword matched 'Identical'")
+        g_email_sender.sendEmail(g_latest_build_index, "Report summary file does not has or has too much keyword matched 'Identical'. \
+                                                        The report summary file is in "+g_absolute_report_dir+". Please check it!", FAIL)
         fp.close()
         return False
      
@@ -63,8 +71,8 @@ def isPassTest():
     else:
         log+=("Identical rate is less than 80%, so BVT did not pass...\n")
         print("BVT did not pass")
-        #to do
-        #send email
+        g_email_sender.sendEmail(g_latest_build_index, "Identical rate is less than 80%, so BVT did not pass. \
+                                                        The report summary file is in "+g_absolute_report_dir+". Please check it!", FAIL)
         return False
         
 def installNewBuild(main_version_index):
@@ -79,8 +87,9 @@ def installNewBuild(main_version_index):
         log+=("Complete downloading latest build...\n")
         print("Complete downloading...")
         
-        if test_info_table.getRecentTestMainVersionIndex() != NO_STATS_INSTALLED:
-            if not uninstallStats(test_info_table.getRecentTestMainVersionIndex()):
+        recent_test_build_index = test_info_table.getRecentTestBuildIndex()
+        if recent_test_build_index != NO_STATS_INSTALLED:
+            if not uninstallStats(recent_test_build_index):
                 return False
               
         #install new version
@@ -89,7 +98,6 @@ def installNewBuild(main_version_index):
 
         #conduct RFT 
         #pass the build_index as an argument
-        
         if os.path.isdir(des_dir):
             os.system(r"C:\Windows\System32\attrib -r "+ des_dir+"\*.* " + " /s /d")
             log+=("Start to delete old download build...\n")
@@ -165,9 +173,11 @@ def runScheduledTask():
     while True:
         global g_is_test_stats_today
         g_is_test_stats_today = False
-        
+
+        today=int(time.strftime("%w"))
         while not g_is_test_stats_today:
             for item in test_info_table.test_info_list:
+                today=int(time.strftime("%w"))
                 log=""
                 if hasNewBuild(item[KEY_WORD_LIST[MAIN_VERSION_INDEX]]):
                     #sleep(HALF_HOUR)
@@ -192,20 +202,20 @@ def runScheduledTask():
                                                              
                 if g_is_test_stats_today:
                     print("Complete a test today!")
+                    g_email_sender.sendEmail(g_latest_build_index,"Complete test of "+g_latest_build_index+"today!",SUCCESS)
                     break
 
             print("Is complete a test today?",g_is_test_stats_today)
             time.sleep(ONE_MIN)
             
-        today=int(time.strftime("%w"))
         while True:
             print("Now start to wait for another day!")
-            time.sleep(ONE_HOUR)
             cur_date = int(time.strftime("%w"))
             if cur_date != today:
-                print("Data changed!")
+                print("Date changed!")
                 g_is_test_stats_today = False
                 break
+            time.sleep(ONE_HOUR)
 
 def installStats(main_version_index):
     version_index = main_version_index.split('.')[0]
@@ -224,37 +234,45 @@ def installStats(main_version_index):
     os.system(MSI_EXE + " /i " + "\"" + stats_msi_absolute_path + "\"" + " /qn /norestart /L*v logfile.txt " + "INSTALLDIR="+ "\"" + install_dir + "\"" + " AUTHCODE=" + auth_code)   
     exe_file = os.path.join(*(INSTALL_DIR+[g_latest_build_index]+["stats.exe"]))
     if os.path.isfile(exe_file):
-        test_info_table.setRecentTestMainVersionIndex(main_version_index)
+        test_info_table.setRecentTestBuildIndex(g_latest_build_index)
         print("Succeed installing Stats!")
         log+=("Complete the installation...\n")
         return True
     else:
         print("Fail to install Stats!")
+        g_email_sender.sendEmail(g_latest_build_index, "There is an unknown error resulting in the failure of installing Stats "+g_latest_build_index\
+                                                       +". The installation files is put in "+stats_msi_absolute_path.split('.')[0:-1]\
+                                                       +". Please make sure the installation package is complete.", FAIL)
         log+=("Fail to install Stats...\n")
         return False
       
-def uninstallStats(main_version_index):
+def uninstallStats(recent_test_build_index):
     global log
     log+=("Start to uninstall an old version...\n")
-    install_dir = os.path.join(*(INSTALL_DIR+[g_latest_build_index])) 
+    install_dir = os.path.join(*(INSTALL_DIR+[recent_test_build_index])) 
+    #check whether current build is installed
     if not os.path.isdir(install_dir):
-        log+=("No current build has been insatlled!\n")    
+        log+=("No old build has been insatlled!\n")    
         return True
     
+    #uninstall stats
+    main_version_index = '.'.join(recent_test_build_index.split('.')[0:-1])
     uninstall_code = test_info_table.getUninstallCode(main_version_index)
     os.system(MSI_EXE + " /X{"+uninstall_code+"} /qn /norestart /L*v logfile.txt ALLUSERS=1 REMOVE=\"ALL\"")
     
-    install_dir = os.path.join(*(INSTALL_DIR+[g_latest_build_index]))
-    exe_file = os.path.join(*(INSTALL_DIR+[g_latest_build_index]+["stats.exe"]))
+    exe_file = os.path.join(*(INSTALL_DIR+[recent_test_build_index]+["stats.exe"]))
     if os.path.isfile(exe_file):
-        print("Fail to uninstall Stats!\n")
+        print("Fail to uninstall Stats!")
         log+=("Fail to uninstall Stats...!\n")
+        g_email_sender.sendEmail(g_latest_build_index, "Before test "+g_latest_build_index+", fail to uninstall an old version of Stats "\
+                                 +recent_test_build_index\
+                                 +". Please uninstall it manually to continue automation test for a new build.", FAIL)
         return False
     else:
         if os.path.isdir(install_dir):
             os.system(r"C:\Windows\System32\attrib -r "+ install_dir+"\*.* " + " /s /d")
             shutil.rmtree(install_dir, ignore_errors = True)
-        print("Succeed uninstalling Stats!\n")
+        print("Succeed uninstalling Stats!")
         log+=("Succeed uninstalling Stats...!\n")
         return True
 
@@ -309,6 +327,10 @@ if __name__ == '__main__':
      
     #log file to record test process
     global log
+    
+    #send instant email
+    global g_email_sender
+    g_email_sender = SendEmail()
 
     clearEnvironment()
     runScheduledTask()
