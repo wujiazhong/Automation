@@ -3,19 +3,19 @@ from email.mime.text import MIMEText
 
 class SendEmail():     
     def __init__(self):
-        self.mailto_list = ['wujz@cn.ibm.com'] 
+        self.mailto_list = ['zhihzhou@cn.ibm.com', 'wujz@cn.ibm.com', 'wluxu@cn.ibm.com'] 
         self.mail_host="9.30.199.60"
         self.mail_port=25
         self.mail_user="automation_test_result"
         self.mail_postfix="noreply.ibm.com"
     
-    def sendEmail(self,build_index,test_summary_content,status):
+    def sendEmail(self,build_index,subject,test_summary_content,status):
         sender = "<"+self.mail_user+'@'+self.mail_user+">"
         msg = MIMEText(test_summary_content,_subtype='plain')
-        msg['Subject'] = "Stats Client "+'.'.join(build_index.split('.')[0:-1])+" [VC9_64] ("+build_index+") "+status
+        msg['Subject'] = subject+" "+status
         msg['From'] = sender
         msg['To'] = ";".join(self.mailto_list)
-    
+        
         try:
             server = smtplib.SMTP()
             server.connect(self.mail_host,self.mail_port)
@@ -25,5 +25,3 @@ class SendEmail():
         except Exception, e:
             print(str(e))
             return False
-    
-    

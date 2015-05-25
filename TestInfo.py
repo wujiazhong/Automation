@@ -17,10 +17,16 @@ KEYWORD = 0
 VALUE = 1
 
 KEY_WORD_LIST = ["Main_Version","Last_Test_Build","Last_Test_Time","Build_Install_Code","Build_Uninstall_Code"]
+SVT_KEY_WORD_LIST=["SVTLocation","RFTJar","RFT_Property","SVT_Property","Reg_Property"]
+
+
 INIT_FILENAME = "test_info"
 
 BUILD_ITEM_HEAD = "<Build_Entry>"
 BUILD_ITEM_TAIL = r"</Build_Entry>"
+
+SVT_INFO_HEAD="<SVT_Info>"
+SVT_INFO_TAIL="</SVT_Info>"
 NO_STATS_INSTALLED = "NONE"
 
 class TestInfo:
@@ -34,12 +40,19 @@ class TestInfo:
         install_code = re.findall(KEY_WORD_LIST[BUILD_INSTALL_CODE]+"=(.+?)\n",config_info,re.S)
         uninstall_code = re.findall(KEY_WORD_LIST[BUILD_UNINSTALL_CODE]+"=(.+?)\n",config_info,re.S)
         
+        #get SVT info
+        self.rft_info_list = list()        
         i=0
-        self.test_info_list = list()
-        while i<len(basic_build_info): 
-            value_list=[basic_build_info[i],last_test_build_number[i],last_test_time[i],install_code[i],uninstall_code[i]] 
-            self.test_info_list.append(dict(zip(KEY_WORD_LIST,value_list)))
+        while i<len(SVT_KEY_WORD_LIST):
+            self.rft_info_list.append(re.findall(SVT_KEY_WORD_LIST[i]+"=(.+?)\n",config_info,re.S)[0])
             i+=1
+            
+        j=0
+        self.test_info_list = list()
+        while j<len(basic_build_info): 
+            value_list=[basic_build_info[j],last_test_build_number[j],last_test_time[j],install_code[j],uninstall_code[j]] 
+            self.test_info_list.append(dict(zip(KEY_WORD_LIST,value_list)))
+            j+=1
             
         self.recent_test_build_index = NO_STATS_INSTALLED
         fp_config.close()
@@ -92,6 +105,12 @@ class TestInfo:
                 fp_config_temp.write(item[key]+'\n')
             fp_config_temp.write(BUILD_ITEM_TAIL+"\n")
 
+        fp_config_temp.write(SVT_INFO_HEAD+"\n")
+        for key in SVT_KEY_WORD_LIST:
+            fp_config_temp.write(key+'=')
+            fp_config_temp.write(self.rft_info_list[SVT_KEY_WORD_LIST.index(key)]+'\n')
+        fp_config_temp.write(SVT_INFO_TAIL+"\n")
+            
         fp_config_temp.close()
         os.remove(INIT_FILENAME)
         os.rename(temp_file,INIT_FILENAME)
