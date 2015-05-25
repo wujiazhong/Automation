@@ -93,7 +93,7 @@ def installNewBuild(main_version_index,has_run_rft_today):
         shutil.copytree(g_absolute_build_dir,des_dir)
         log+=("Complete downloading latest build...\n")
         print("Complete downloading...")
-        
+
         #uninstall old version
         recent_test_build_index = test_info_table.getRecentTestBuildIndex()
         if recent_test_build_index != NO_STATS_INSTALLED:
@@ -342,6 +342,7 @@ def uninstallStats(recent_test_build_index):
     global log
     log+=("Start to uninstall an old version...\n")
     install_dir = os.path.join(*(INSTALL_DIR)) 
+    
     #check whether current build is installed
     if not os.path.isdir(install_dir):
         log+=("No old build has been insatlled!\n")    

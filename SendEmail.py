@@ -15,7 +15,6 @@ class SendEmail():
         msg['Subject'] = subject+" "+status
         msg['From'] = sender
         msg['To'] = ";".join(self.mailto_list)
-        
         try:
             server = smtplib.SMTP()
             server.connect(self.mail_host,self.mail_port)
